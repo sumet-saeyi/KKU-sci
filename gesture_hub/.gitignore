@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.venv/
+.venv311/
+venv/
+env/
+
+# AI Models (Too large for git)
+*.pt
+*.pth
+*.task
+
+# User Data & Scores
+flappy_scores.json
+
+# Temporary / Output Media
+media/
+nn_plot_output.png
+user_digit.png
+
+# Jupyter Notebooks
+.ipynb_checkpoints/

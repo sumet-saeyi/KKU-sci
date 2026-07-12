@@ -1,0 +1,14 @@
+# Virtual Environments
+.venv311/
+.venv/
+venv/
+env/
+
+# Large files
+*.pt
+*.pth
+*.task
+
+# Python caches
+__pycache__/
+*.pyc

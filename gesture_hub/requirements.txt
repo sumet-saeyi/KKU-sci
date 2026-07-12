@@ -1,0 +1,6 @@
+PyQt6
+opencv-python
+mediapipe
+numpy
+pyautogui
+ultralytics
