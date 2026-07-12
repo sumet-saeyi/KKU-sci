@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.venv/
+.venv311/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Jupyter
+.ipynb_checkpoints/
