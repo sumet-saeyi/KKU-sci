@@ -1,6 +1,6 @@
 # KKU-Sci Gesture Hub
 
-![Status](https://img.shields.io/badge/Status-Active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.11-blue) ![PyQt6](https://img.shields.io/badge/PyQt-6-green) ![Docker](https://img.shields.io/badge/Docker-Supported-blue)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen) ![Python](https://img.shields.io/badge/Python-3.11-blue) ![PyQt6](https://img.shields.io/badge/PyQt-6-green)
 
 ## Overview
 **Gesture Hub** is an interactive computer vision application built with PyQt6. It leverages **MediaPipe** and **YOLOv8** to track body movements and hand gestures in real-time, allowing users to control applications and games via an augmented reality (AR) "neural uplink" interface.
@@ -23,11 +23,9 @@ The project features a sleek, glassmorphism-inspired **Sci-Fi Cybernetic** UI de
 - **YOLOv8 (Ultralytics)**: Fast person-presence gating (GPU-accelerated).
 - **OpenCV**: Camera feed capture and processing.
 - **PyInstaller**: Standalone Windows Executable generation.
-- **Docker**: Containerized Linux deployment support.
 
 ## 🚀 Installation & Setup
 
-### Option 1: Native Python (Windows/Linux/Mac)
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/sumet-saeyi/KKU-sci.git
@@ -41,13 +39,6 @@ The project features a sleek, glassmorphism-inspired **Sci-Fi Cybernetic** UI de
    ```bash
    python main.py
    ```
-
-### Option 2: Docker (Linux)
-The repository includes a `Dockerfile` pre-configured with the heavy X11, OpenCV, and Pygame Audio dependencies required to run the UI.
-```bash
-docker build -t gesture_hub .
-# Note: Running GUI apps with webcam access via Docker requires passing X11 sockets and /dev/video devices.
-```
 
 ## 📦 Standalone Executable (Windows)
 You can build a portable Windows `.exe` using PyInstaller. 
