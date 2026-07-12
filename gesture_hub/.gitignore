@@ -25,3 +25,8 @@ user_digit.png
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
+
+# PyInstaller
+build/
+dist/
+*.spec
