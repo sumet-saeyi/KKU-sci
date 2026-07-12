@@ -22,8 +22,6 @@ The project features a sleek, glassmorphism-inspired **Sci-Fi Cybernetic** UI de
 - **MediaPipe (Google)**: Hand tracking, landmark generation, and gesture recognition.
 - **YOLOv8 (Ultralytics)**: Fast person-presence gating (GPU-accelerated).
 - **OpenCV**: Camera feed capture and processing.
-- **PyInstaller**: Standalone Windows Executable generation.
-
 ## 🚀 Installation & Setup
 
 1. **Clone the repository**:
@@ -39,14 +37,6 @@ The project features a sleek, glassmorphism-inspired **Sci-Fi Cybernetic** UI de
    ```bash
    python main.py
    ```
-
-## 📦 Standalone Executable (Windows)
-You can build a portable Windows `.exe` using PyInstaller. 
-Run the following command inside the `gesture_hub` folder:
-```bash
-pyinstaller --name "GestureHub" --add-data "features/flappy_assets;features/flappy_assets" --add-data "gesture_recognizer.task;." --add-data "yolov8n.pt;." main.py
-```
-This will output a `dist/GestureHub` folder containing the executable and all bundled AI models. You can share this folder, and it will run instantly without requiring Python to be installed!
 
 ## 🧠 Architecture
 - `main.py`: Entry point and main window UI construction.
