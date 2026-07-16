@@ -7,14 +7,6 @@
 
 The project features a sleek, glassmorphism-inspired **Sci-Fi Cybernetic** UI design.
 
-## 🎮 Features
-- **Flappy Bird AR Integration**: Play the classic arcade game entirely through hand gestures!
-  - ☝️ **Point Up (Index Finger)**: Flap / Jump
-  - 🖐️ **Open Palm**: Restart Game
-- **Sci-Fi Cybernetic UI**: Semi-transparent dark glass components, glowing Teal (`#0ea5e9`) and Amber (`#f59e0b`) accents, and a tinted cyber-simulation game environment.
-- **Dynamic Cyber Leaderboard**: A rich HTML-rendered persistent scoreboard that automatically assigns unique `Anonymous_N` IDs if no name is provided.
-- **60 FPS Physics Engine**: Rebuilt Pygame floating-point mechanics for buttery smooth gameplay synchronized with the AR overlay.
-
 ## ⚙️ Tech Stack
 - **Python 3.11**
 - **PyQt6**: Core UI framework and layout management.
