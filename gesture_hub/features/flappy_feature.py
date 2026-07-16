@@ -174,6 +174,9 @@ class FlappyBirdFeature(FeatureModule):
         except:
             pass # Fallback handled if needed
         
+        self.top_left_qr = QImage(os.path.join(ASSETS, 'sprites', 'top_left_qr.png'))
+        self.top_right_qr = QImage(os.path.join(ASSETS, 'sprites', 'top_right_qr.png'))
+        
         self.scores_file = os.path.join(current_dir, "flappy_scores.json")
         self.top_scores = self.load_scores()
         
@@ -248,18 +251,45 @@ class FlappyBirdFeature(FeatureModule):
         painter = QPainter(qt_img)
             
         # Draw AR Cyber HUD overlay on camera
-        painter.setBrush(QColor(15, 23, 42, 180)) # Semi-transparent dark background
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(15, 15, 420, 165, 15, 15)
+        # painter.setBrush(QColor(15, 23, 42, 180)) # Semi-transparent dark background
+        # painter.setPen(Qt.PenStyle.NoPen)
+        # painter.drawRoundedRect(15, 15, 420, 165, 15, 15)
         
-        painter.setPen(QColor(245, 158, 11)) # Amber
-        painter.setFont(QFont("Consolas", 21, QFont.Weight.Bold))
-        painter.drawText(30, 60, ":: COMMAND ::")
+        # painter.setPen(QColor(245, 158, 11)) # Amber
+        # painter.setFont(QFont("Consolas", 21, QFont.Weight.Bold))
+        # painter.drawText(30, 60, ":: COMMAND ::")
+
+        # don't need it      
+        # painter.setPen(QColor(14, 165, 233)) # Teal
+        # painter.setFont(QFont("Consolas", 18))
+        # painter.drawText(30, 112, "🖐️ Open Palm = Jump")
+        # painter.drawText(30, 157, "⏱️ Auto-reset on death")
         
-        painter.setPen(QColor(14, 165, 233)) # Teal
-        painter.setFont(QFont("Consolas", 18))
-        painter.drawText(30, 112, "🖐️ Open Palm = Jump")
-        painter.drawText(30, 157, "⏱️ Auto-reset on death")
+        img_w = qt_img.width()
+        
+        # --- Top Right QR ---
+        if not self.top_right_qr.isNull():
+            # Create a 200x200 box for the QR
+            scaled_tr = self.top_right_qr.scaled(450, 450, Qt.AspectRatioMode.KeepAspectRatio)
+            tr_x = img_w - scaled_tr.width() - 20
+            tr_y = 20
+            painter.drawImage(tr_x, tr_y, scaled_tr)
+            # Dummy text under QR
+            painter.setPen(QColor(255, 255, 255))
+            painter.setFont(QFont("Consolas", 26, QFont.Weight.Bold))
+            painter.drawText(tr_x, tr_y + scaled_tr.height() + 25, "DUMMY TEXT RIGHT")
+            
+        # --- Top Left QR ---
+        if not self.top_left_qr.isNull():
+            # Create a 200x200 box for the QR
+            scaled_tl = self.top_left_qr.scaled(450, 450, Qt.AspectRatioMode.KeepAspectRatio)
+            tl_x = 20
+            tl_y = 20 # Placed below the HUD box (which ends at Y=180)
+            painter.drawImage(tl_x, tl_y, scaled_tl)
+            # Dummy text under QR
+            painter.setPen(QColor(255, 255, 255))
+            painter.setFont(QFont("Consolas", 26, QFont.Weight.Bold))
+            painter.drawText(tl_x, tl_y + scaled_tl.height() + 25, "DUMMY TEXT LEFT")
             
         painter.end()
 
