@@ -24,7 +24,7 @@ GROUND_HEIGHT= 100
 PIPE_WIDTH = 80
 PIPE_HEIGHT = 500
 
-PIPE_GAP = 150
+PIPE_GAP = 250
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(current_dir, "flappy_assets")
@@ -39,9 +39,9 @@ hit = os.path.join(ASSETS, 'audio', 'hit.wav')
 class Bird(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.images =  [pygame.image.load(os.path.join(ASSETS, 'sprites', 'bluebird-upflap.png')).convert_alpha(),
-                        pygame.image.load(os.path.join(ASSETS, 'sprites', 'bluebird-midflap.png')).convert_alpha(),
-                        pygame.image.load(os.path.join(ASSETS, 'sprites', 'bluebird-downflap.png')).convert_alpha()]
+        self.images =  [pygame.image.load(os.path.join(ASSETS, 'sprites', 'KKU-upflap.png')).convert_alpha(),
+                        pygame.image.load(os.path.join(ASSETS, 'sprites', 'KKU-midflap.png')).convert_alpha(),
+                        pygame.image.load(os.path.join(ASSETS, 'sprites', 'KKU-downflap.png')).convert_alpha()]
         self.speed = SPEED
         self.current_image = 0
         self.image = self.images[self.current_image]
@@ -169,6 +169,11 @@ class FlappyBirdFeature(FeatureModule):
         
         self.begin_image = pygame.image.load(os.path.join(ASSETS, 'sprites', 'message.png')).convert_alpha()
         
+        try:
+            self.gameover_image = pygame.image.load(os.path.join(ASSETS, 'sprites', 'gameover.png')).convert_alpha()
+        except:
+            pass # Fallback handled if needed
+        
         self.scores_file = os.path.join(current_dir, "flappy_scores.json")
         self.top_scores = self.load_scores()
         
@@ -179,6 +184,7 @@ class FlappyBirdFeature(FeatureModule):
         self.timer.start(1000 // 60) # 60 FPS
         
         self.last_jump_time = 0
+        self.hand_was_open = False
         self.scroll_offset = 0
 
     @property
@@ -201,22 +207,9 @@ class FlappyBirdFeature(FeatureModule):
 
     def save_score(self):
         if self.score > 0:
-            name, ok = QInputDialog.getText(self.widget, "New Score!", f"You scored {self.score}!\nEnter your name:")
-            if not ok or not name:
-                anon_count = 1
-                while any(s['name'] == f"Anonymous_{anon_count}" for s in self.top_scores):
-                    anon_count += 1
-                name = f"Anonymous_{anon_count}"
-                
-            # Check for existing player name
-            existing = next((s for s in self.top_scores if s['name'] == name), None)
+            name = time.strftime("%b %d, %H:%M")
+            self.top_scores.append({"name": name, "score": self.score})
             
-            if existing:
-                if self.score > existing['score']:
-                    existing['score'] = self.score
-            else:
-                self.top_scores.append({"name": name, "score": self.score})
-                
             self.top_scores.sort(key=lambda x: x["score"], reverse=True)
             self.top_scores = self.top_scores[:10] # Top 10 only
             try:
@@ -265,8 +258,8 @@ class FlappyBirdFeature(FeatureModule):
         
         painter.setPen(QColor(14, 165, 233)) # Teal
         painter.setFont(QFont("Consolas", 18))
-        painter.drawText(30, 112, "☝️ Point Up = Flap")
-        painter.drawText(30, 157, "🖐️ Open Palm = Restart")
+        painter.drawText(30, 112, "🖐️ Open Palm = Jump")
+        painter.drawText(30, 157, "⏱️ Auto-reset on death")
             
         painter.end()
 
@@ -282,18 +275,19 @@ class FlappyBirdFeature(FeatureModule):
         now = time.time()
         
         jumped = False
+        any_clear = False
+        
         for hand in hands:
             command = hand.get('command', 'idle')
             h_id = hand.get('handedness', 'Unknown')
             
-            # Use ANY hand Pointing Up (draw) to jump!
-            if command == "draw" and now - self.last_jump_time > 0.3:
-                jumped = True
+            # Use Open hand (clear) to jump! (Trigger only once per open motion)
+            if command == "clear":
+                any_clear = True
+                if not self.hand_was_open:
+                    jumped = True
                 
-            # Open Palm to restart when dead
-            if self.state == "gameover" and command == "clear" and now - self.last_jump_time > 1.0:
-                self.reset_game()
-                self.last_jump_time = now
+        self.hand_was_open = any_clear
                 
         if jumped and self.state != "gameover":
             self.bird.bump()
@@ -311,7 +305,9 @@ class FlappyBirdFeature(FeatureModule):
             return
             
         if self.state == "gameover":
-            pass # Keep drawing the last frame
+            if time.time() - getattr(self, 'gameover_time', time.time()) > 1.0:
+                self.reset_game()
+                return
         elif self.state == "start":
             self.bird.begin()
             self.ground_group.update()
@@ -343,6 +339,7 @@ class FlappyBirdFeature(FeatureModule):
                 except:
                     pass
                 self.state = "gameover"
+                self.gameover_time = time.time()
                 self.save_score()
 
         # Render
@@ -355,6 +352,19 @@ class FlappyBirdFeature(FeatureModule):
         self.pipe_group.draw(self.surface)
         self.ground_group.draw(self.surface)
         self.bird_group.draw(self.surface)
+        
+        if self.state == "gameover":
+            if hasattr(self, 'gameover_image'):
+                go_w = self.gameover_image.get_width()
+                go_h = self.gameover_image.get_height()
+                self.surface.blit(self.gameover_image, (SCREEN_WIDTH // 2 - go_w // 2, SCREEN_HEIGHT // 2 - go_h // 2))
+            else:
+                pygame.font.init()
+                go_font = pygame.font.SysFont('Consolas', 60, True)
+                go_text = go_font.render("GAME OVER", True, (239, 68, 68))
+                go_outline = go_font.render("GAME OVER", True, (0, 0, 0))
+                self.surface.blit(go_outline, (SCREEN_WIDTH // 2 - go_text.get_width() // 2 + 3, SCREEN_HEIGHT // 2 - go_text.get_height() // 2 + 3))
+                self.surface.blit(go_text, (SCREEN_WIDTH // 2 - go_text.get_width() // 2, SCREEN_HEIGHT // 2 - go_text.get_height() // 2))
         
         # Draw Score
         if self.state in ["playing", "gameover"]:
@@ -402,8 +412,8 @@ class FlappyBirdFeature(FeatureModule):
         # We don't even need to slice lines because HTML handles layout cleanly!
         # But we'll still use the scroll_offset for a cool blinking effect on the header
         if self.scroll_offset % 30 < 15:
-            lines[1] = "<center><span style='color: #f59e0b; font-size: 24px; font-weight: bold; margin-bottom: 10px;'>🏆 CYBER LEADERBOARD 🏆</span></center>"
+            lines[1] = "<center><span style='color: #f59e0b; font-size: 24px; font-weight: bold; margin-bottom: 10px;'>🏆 KKU FLAPER LEADERBOARD 🏆</span></center>"
         else:
-            lines[1] = "<center><span style='color: #d97706; font-size: 24px; font-weight: bold; margin-bottom: 10px;'>🏆 CYBER LEADERBOARD 🏆</span></center>"
+            lines[1] = "<center><span style='color: #d97706; font-size: 24px; font-weight: bold; margin-bottom: 10px;'>🏆 KKU FLAPER LEADERBOARD 🏆</span></center>"
 
         self.scoreboard_label.setText("".join(lines))

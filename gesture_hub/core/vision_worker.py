@@ -31,6 +31,15 @@ HAND_CONNECTIONS = [
 PROCESS_W = 320
 PROCESS_H = 240
 
+# --- Detection Zone Configuration ---
+# If True, hand prediction is restricted to this zone
+USE_DETECTION_ZONE = True
+# Zone coordinates as percentages of frame dimensions (0.0 to 1.0)
+# A centered box covering 50% of the width and 50% of the height
+ZONE_PCT_X1, ZONE_PCT_Y1 = 0.25, 0.25
+ZONE_PCT_X2, ZONE_PCT_Y2 = 0.75, 0.75
+# ------------------------------------
+
 
 def draw_landmarks(image, hand_landmarks, scale_x, scale_y):
     h, w, _ = image.shape
@@ -84,9 +93,10 @@ class VisionWorker(QThread):
     def run(self):
         # Use DirectShow backend on Windows to prevent MSMF buffer/resolution crashes
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        cap.set(cv2.CAP_PROP_FPS, 30)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920 )
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080 )
+        cap.set(cv2.CAP_PROP_FPS, 60)
         prev_ts = 0
 
         while self.running and cap.isOpened():
@@ -95,25 +105,31 @@ class VisionWorker(QThread):
                 continue
 
             frame = cv2.flip(frame, 1)
-            frame = cv2.resize(frame, (1280, 720)) # Force HD resolution for UI
+            frame = cv2.resize(frame, (1920, 1080)) # Force HD resolution for UI
             display_h, display_w = frame.shape[:2]
             scale_x = display_w / PROCESS_W
             scale_y = display_h / PROCESS_H
             self.frame_count += 1
+            
+            # Calculate dynamic zone coordinates based on percentages
+            zx1 = int(display_w * ZONE_PCT_X1)
+            zy1 = int(display_h * ZONE_PCT_Y1)
+            zx2 = int(display_w * ZONE_PCT_X2)
+            zy2 = int(display_h * ZONE_PCT_Y2)
 
             # Downscale for processing
             small = cv2.resize(frame, (PROCESS_W, PROCESS_H))
             rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
 
             # YOLO person check every 3rd frame
-            if self.frame_count % 3 == 0:
+            if self.frame_count % 2 == 0:
                 results = self.yolo.predict(
                     small, classes=[0], conf=0.4,
                     verbose=False, imgsz=320)
                 self.person_present = len(results[0].boxes) > 0
 
             # Gesture recognition every 2nd frame
-            if self.person_present and self.frame_count % 2 == 0:
+            if self.person_present and self.frame_count % 1 == 0:
                 mp_image = mp.Image(
                     image_format=mp.ImageFormat.SRGB, data=rgb_small)
                 ts = int(time.time() * 1000)
@@ -125,8 +141,18 @@ class VisionWorker(QThread):
 
                 hands = []
                 if result.hand_landmarks:
-                    self.last_landmarks_raw = result.hand_landmarks
+                    # We won't blindly copy to last_landmarks_raw, we'll only copy valid hands
+                    valid_hand_landmarks = []
                     for i, hand_lms in enumerate(result.hand_landmarks):
+                        # Filter by zone if enabled
+                        if USE_DETECTION_ZONE:
+                            # Use middle finger MCP (landmark 9) as the hand center
+                            center_x = int(hand_lms[9].x * PROCESS_W * scale_x)
+                            center_y = int(hand_lms[9].y * PROCESS_H * scale_y)
+                            if not (zx1 <= center_x <= zx2 and zy1 <= center_y <= zy2):
+                                continue  # Hand is outside the box zone
+                        
+                        valid_hand_landmarks.append(hand_lms)
                         draw_landmarks(frame, hand_lms, scale_x, scale_y)
                         
                         gesture_name = "None"
@@ -156,8 +182,10 @@ class VisionWorker(QThread):
                             'handedness': handedness,
                             'landmarks': lm_list
                         })
+                    self.last_landmarks_raw = valid_hand_landmarks if valid_hand_landmarks else None
                 else:
                     self.last_landmarks_raw = None
+
 
                 event_data = {
                     'raw_frame': cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
@@ -176,6 +204,12 @@ class VisionWorker(QThread):
                     for hand_lms in self.last_landmarks_raw:
                         draw_landmarks(frame, hand_lms, scale_x, scale_y)
                 bus.gesture_event.emit(self.last_event)
+
+            # Draw the detection zone on the frame so the user knows where to put their hand
+            if USE_DETECTION_ZONE:
+                cv2.rectangle(frame, (zx1, zy1), (zx2, zy2), (0, 255, 255), 2)
+                cv2.putText(frame, "Detection Zone", (zx1, zy1 - 10), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             # Display frame
             rgb_display = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
