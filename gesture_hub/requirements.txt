@@ -4,3 +4,6 @@ mediapipe
 numpy
 pyautogui
 ultralytics
+torch
+torchvision
+pygame

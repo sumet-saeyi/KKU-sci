@@ -7,6 +7,7 @@ from PyQt6.QtGui import QPixmap
 
 import features.air_canvas
 import features.flappy_feature
+import features.spaceship_feature
 
 from core.registry import FEATURE_REGISTRY
 from core.vision_worker import VisionWorker
@@ -57,6 +58,14 @@ class GestureHubShell(QMainWindow):
         
     def change_feature(self, index):
         self.content_area.setCurrentIndex(index)
+        # Detection zone (the yellow box) only matters for Flappy Bird --
+        # other features (Air Canvas, Spaceship Dodge) get the full camera
+        # capture area with no zone restriction.
+        if index == 0:
+            bus.detection_zone_active = False
+        else:
+            active_feature = self.features[index - 1]
+            bus.detection_zone_active = (active_feature.name == "Flappy Bird")
         
     def update_camera_view(self, qt_img):
         if self.content_area.currentIndex() == 0:

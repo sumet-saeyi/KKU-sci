@@ -35,6 +35,7 @@ The project features a sleek, glassmorphism-inspired **Sci-Fi Cybernetic** UI de
 - `core/vision_worker.py`: Background `QThread` handling OpenCV capture, YOLO bounding boxes, and MediaPipe tracking.
 - `core/gesture_bus.py`: Signal-based event bus for broadcasting camera frames and recognized gesture events.
 - `features/flappy_feature.py`: The Flappy Bird Pygame hybrid integration.
+- `features/spaceship_feature.py`: Spaceship Dodge -- steer with hand X position, Closed_Fist to fire.
 
 ## 🕹️ How to Play
 1. Stand in front of your webcam.

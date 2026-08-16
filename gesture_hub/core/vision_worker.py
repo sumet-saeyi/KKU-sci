@@ -2,6 +2,7 @@ import cv2
 import time
 import os
 import platform
+import urllib.request
 import numpy as np
 import torch
 import mediapipe as mp
@@ -12,6 +13,23 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtGui import QImage
 from core.gesture_bus import bus
 from core.gesture_commands import gesture_to_command
+
+GESTURE_RECOGNIZER_URL = (
+    "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/"
+    "gesture_recognizer/float16/latest/gesture_recognizer.task"
+)
+
+
+def ensure_gesture_model(model_path):
+    """gesture_recognizer.task is in .gitignore (model files too large for git),
+    so a fresh clone has none. Download Google's official bundle on first run
+    instead of hard-crashing with FileNotFoundError."""
+    if os.path.exists(model_path):
+        return
+    print(f"[VisionWorker] Downloading gesture_recognizer.task to {model_path} ...")
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    urllib.request.urlretrieve(GESTURE_RECOGNIZER_URL, model_path)
+    print("[VisionWorker] gesture_recognizer.task downloaded.")
 
 # Auto-detect GPU
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -30,11 +48,11 @@ HAND_CONNECTIONS = [
 ]
 
 PROCESS_W = 1280
-PROCESS_H = 720 
+PROCESS_H = 720
 
 # --- Detection Zone Configuration ---
-# If True, hand prediction is restricted to this zone
-USE_DETECTION_ZONE = True
+# Whether the zone is enforced is decided per-frame via bus.detection_zone_active
+# (main.py sets it based on which feature is currently active -- see gesture_bus.py).
 # Zone coordinates as percentages of frame dimensions (0.0 to 1.0)
 # A centered box covering 50% of the width and 50% of the height
 ZONE_PCT_X1, ZONE_PCT_Y1 = 0.25, 0.25
@@ -70,8 +88,7 @@ class VisionWorker(QThread):
         model_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             '..', 'gesture_recognizer.task')
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Missing MediaPipe model at {model_path}")
+        ensure_gesture_model(model_path)
 
         # Note: MediaPipe Python GPU Delegate is NOT supported on Windows natively.
         # We must use CPU for MediaPipe. YOLO will still use GPU!
@@ -99,8 +116,8 @@ class VisionWorker(QThread):
         else:
             cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720 )
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, PROCESS_W)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, PROCESS_H)
         cap.set(cv2.CAP_PROP_FPS, 60)
         prev_ts = 0
 
@@ -110,12 +127,16 @@ class VisionWorker(QThread):
                 continue
 
             frame = cv2.flip(frame, 1)
-            frame = cv2.resize(frame, (1280, 720)) # Force HD resolution for UI
+            # Only resize if the camera didn't honor the requested capture
+            # size -- avoids an identity resize (same w/h) on every frame.
+            if frame.shape[1] != PROCESS_W or frame.shape[0] != PROCESS_H:
+                frame = cv2.resize(frame, (PROCESS_W, PROCESS_H))
             display_h, display_w = frame.shape[:2]
             scale_x = display_w / PROCESS_W
             scale_y = display_h / PROCESS_H
             self.frame_count += 1
-            
+            zone_active = bus.detection_zone_active
+
             # Calculate dynamic zone coordinates based on percentages
             # zx1 = int(display_w * ZONE_PCT_X1)
             # zy1 = int(display_h * ZONE_PCT_Y1)
@@ -128,19 +149,19 @@ class VisionWorker(QThread):
             zx2 = min(display_w, zcx + zone_side // 2)
             zy2 = min(display_h, zcy + zone_side // 2)
 
-            # Downscale for processing
-            small = cv2.resize(frame, (PROCESS_W, PROCESS_H))
-            rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+            # frame is already at PROCESS_W x PROCESS_H, so it can be fed to
+            # YOLO/MediaPipe directly -- no separate downscale copy needed.
+            rgb_small = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # YOLO person check every 3rd frame
-            if self.frame_count % 2 == 0:
+            # YOLO person check every 3rd frame -- presence doesn't change
+            # fast enough to need checking on every frame.
+            if self.frame_count % 3 == 0:
                 results = self.yolo.predict(
-                    small, classes=[0], conf=0.4,
+                    frame, classes=[0], conf=0.4,
                     verbose=False, imgsz=320)
                 self.person_present = len(results[0].boxes) > 0
 
-            # Gesture recognition every 2nd frame
-            if self.person_present and self.frame_count % 1 == 0:
+            if self.person_present:
                 mp_image = mp.Image(
                     image_format=mp.ImageFormat.SRGB, data=rgb_small)
                 ts = int(time.time() * 1000)
@@ -156,7 +177,7 @@ class VisionWorker(QThread):
                     valid_hand_landmarks = []
                     for i, hand_lms in enumerate(result.hand_landmarks):
                         # Filter by zone if enabled
-                        if USE_DETECTION_ZONE:
+                        if zone_active:
                             # Use middle finger MCP (landmark 9) as the hand center
                             center_x = int(hand_lms[9].x * PROCESS_W * scale_x)
                             center_y = int(hand_lms[9].y * PROCESS_H * scale_y)
@@ -217,7 +238,7 @@ class VisionWorker(QThread):
                 bus.gesture_event.emit(self.last_event)
 
             # Draw the detection zone on the frame so the user knows where to put their hand
-            if USE_DETECTION_ZONE:
+            if zone_active:
                 cv2.rectangle(frame, (zx1, zy1), (zx2, zy2), (0, 255, 255), 2)
                 cv2.putText(frame, "Detection Zone", (zx1, zy1 - 10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)

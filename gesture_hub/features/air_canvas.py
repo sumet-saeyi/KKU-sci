@@ -7,7 +7,7 @@ import subprocess
 import torch
 from torchvision import transforms
 from collections import deque
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt
 from core.feature_interface import FeatureModule
@@ -27,8 +27,11 @@ class AirCanvasFeature(FeatureModule):
         self.canvas = None
         self.widget = QWidget()
         self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
         self.display_label = QLabel("Air Canvas")
         self.display_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.display_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.layout.addWidget(self.display_label)
         self.widget.setLayout(self.layout)
 
@@ -61,7 +64,15 @@ class AirCanvasFeature(FeatureModule):
         # MNIST ML setup
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.mnist_model = None
-        self.mlp_path = os.path.join(os.path.dirname(__file__), "..", "mnist_mlp.pth")
+        # The trained Ge2019CNN weights live at the repo root (KKU-sci/mnist_mlp.pth);
+        # fall back to a copy inside gesture_hub/ if the root one is missing.
+        _here = os.path.dirname(os.path.abspath(__file__))
+        _candidates = [
+            os.path.join(_here, "..", "..", "mnist_mlp.pth"),  # KKU-sci/mnist_mlp.pth
+            os.path.join(_here, "..", "mnist_mlp.pth"),        # gesture_hub/mnist_mlp.pth
+        ]
+        self.mlp_path = next(
+            (p for p in _candidates if os.path.exists(p)), _candidates[0])
         
         # Prediction Animation State
         self.prediction_result = None

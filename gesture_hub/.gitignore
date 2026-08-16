@@ -17,6 +17,8 @@ env/
 
 # User Data & Scores
 flappy_scores.json
+spaceship_best.json
+spaceship_scores.json
 
 # Temporary / Output Media
 media/

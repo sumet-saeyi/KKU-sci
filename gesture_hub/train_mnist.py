@@ -68,7 +68,7 @@ if __name__ == "__main__":
     
     model.train()
     # 5 epochs for a deep architecture
-    for epoch in range(500): 
+    for epoch in range(5):
         total_loss = 0
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
