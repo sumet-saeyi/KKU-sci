@@ -1,6 +1,7 @@
 import cv2
 import time
 import os
+import platform
 import numpy as np
 import torch
 import mediapipe as mp
@@ -28,8 +29,8 @@ HAND_CONNECTIONS = [
     (0, 17)
 ]
 
-PROCESS_W = 320
-PROCESS_H = 240
+PROCESS_W = 1280
+PROCESS_H = 720 
 
 # --- Detection Zone Configuration ---
 # If True, hand prediction is restricted to this zone
@@ -38,6 +39,7 @@ USE_DETECTION_ZONE = True
 # A centered box covering 50% of the width and 50% of the height
 ZONE_PCT_X1, ZONE_PCT_Y1 = 0.25, 0.25
 ZONE_PCT_X2, ZONE_PCT_Y2 = 0.75, 0.75
+ZONE_SIZE_PCT = 0.5
 # ------------------------------------
 
 
@@ -91,11 +93,14 @@ class VisionWorker(QThread):
         self.person_present = True
 
     def run(self):
-        # Use DirectShow backend on Windows to prevent MSMF buffer/resolution crashes
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        # Use the appropriate camera backend for the current OS
+        if platform.system() == "Windows":
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        else:
+            cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920 )
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080 )
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720 )
         cap.set(cv2.CAP_PROP_FPS, 60)
         prev_ts = 0
 
@@ -105,17 +110,23 @@ class VisionWorker(QThread):
                 continue
 
             frame = cv2.flip(frame, 1)
-            frame = cv2.resize(frame, (1920, 1080)) # Force HD resolution for UI
+            frame = cv2.resize(frame, (1280, 720)) # Force HD resolution for UI
             display_h, display_w = frame.shape[:2]
             scale_x = display_w / PROCESS_W
             scale_y = display_h / PROCESS_H
             self.frame_count += 1
             
             # Calculate dynamic zone coordinates based on percentages
-            zx1 = int(display_w * ZONE_PCT_X1)
-            zy1 = int(display_h * ZONE_PCT_Y1)
-            zx2 = int(display_w * ZONE_PCT_X2)
-            zy2 = int(display_h * ZONE_PCT_Y2)
+            # zx1 = int(display_w * ZONE_PCT_X1)
+            # zy1 = int(display_h * ZONE_PCT_Y1)
+            # zx2 = int(display_w * ZONE_PCT_X2)
+            # zy2 = int(display_h * ZONE_PCT_Y2)
+            zone_side = int(min(display_w, display_h) * ZONE_SIZE_PCT)
+            zcx, zcy = display_w // 2, display_h // 2
+            zx1 = max(0, zcx - zone_side // 2)
+            zy1 = max(0, zcy - zone_side // 2)
+            zx2 = min(display_w, zcx + zone_side // 2)
+            zy2 = min(display_h, zcy + zone_side // 2)
 
             # Downscale for processing
             small = cv2.resize(frame, (PROCESS_W, PROCESS_H))

@@ -268,28 +268,28 @@ class FlappyBirdFeature(FeatureModule):
         img_w = qt_img.width()
         
         # --- Top Right QR ---
-        if not self.top_right_qr.isNull():
-            # Create a 200x200 box for the QR
-            scaled_tr = self.top_right_qr.scaled(450, 450, Qt.AspectRatioMode.KeepAspectRatio)
-            tr_x = img_w - scaled_tr.width() - 20
-            tr_y = 20
-            painter.drawImage(tr_x, tr_y, scaled_tr)
-            # Dummy text under QR
-            painter.setPen(QColor(255, 255, 255))
-            painter.setFont(QFont("Consolas", 26, QFont.Weight.Bold))
-            painter.drawText(tr_x, tr_y + scaled_tr.height() + 25, "DUMMY TEXT RIGHT")
+        # if not self.top_right_qr.isNull():
+        #     # Create a 200x200 box for the QR
+        #     scaled_tr = self.top_right_qr.scaled(450, 450, Qt.AspectRatioMode.KeepAspectRatio)
+        #     tr_x = img_w - scaled_tr.width() - 20
+        #     tr_y = 20
+        #     painter.drawImage(tr_x, tr_y, scaled_tr)
+        #     # Dummy text under QR
+        #     painter.setPen(QColor(255, 255, 255))
+        #     painter.setFont(QFont("Consolas", 26, QFont.Weight.Bold))
+        #     painter.drawText(tr_x, tr_y + scaled_tr.height() + 25, "DUMMY TEXT RIGHT")
             
         # --- Top Left QR ---
-        if not self.top_left_qr.isNull():
-            # Create a 200x200 box for the QR
-            scaled_tl = self.top_left_qr.scaled(450, 450, Qt.AspectRatioMode.KeepAspectRatio)
-            tl_x = 20
-            tl_y = 20 # Placed below the HUD box (which ends at Y=180)
-            painter.drawImage(tl_x, tl_y, scaled_tl)
-            # Dummy text under QR
-            painter.setPen(QColor(255, 255, 255))
-            painter.setFont(QFont("Consolas", 26, QFont.Weight.Bold))
-            painter.drawText(tl_x, tl_y + scaled_tl.height() + 25, "DUMMY TEXT LEFT")
+        # if not self.top_left_qr.isNull():
+        #     # Create a 200x200 box for the QR
+        #     scaled_tl = self.top_left_qr.scaled(450, 450, Qt.AspectRatioMode.KeepAspectRatio)
+        #     tl_x = 20
+        #     tl_y = 20 # Placed below the HUD box (which ends at Y=180)
+        #     painter.drawImage(tl_x, tl_y, scaled_tl)
+        #     # Dummy text under QR
+        #     painter.setPen(QColor(255, 255, 255))
+        #     painter.setFont(QFont("Consolas", 26, QFont.Weight.Bold))
+        #     painter.drawText(tl_x, tl_y + scaled_tl.height() + 25, "DUMMY TEXT LEFT")
             
         painter.end()
 
@@ -312,7 +312,7 @@ class FlappyBirdFeature(FeatureModule):
             h_id = hand.get('handedness', 'Unknown')
             
             # Use Open hand (clear) to jump! (Trigger only once per open motion)
-            if command == "clear":
+            if command == "stop":
                 any_clear = True
                 if not self.hand_was_open:
                     jumped = True
